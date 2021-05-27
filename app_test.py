@@ -18,25 +18,25 @@ def securityhub_stub():
 
 @pytest.fixture
 def securityhub_successful_import():
-  return { "ResponseMetadata": {
-           "RequestId": "2cda4dc4-cca4-42e9-898b-e76efb4ba2f4",
-           "HTTPStatusCode": 200,
-           "HTTPHeaders": {
-             "date": "Thu, 27 May 2021 08:36:01 GMT",
-             "content-type": "application/json",
-             "content-length": "54",
-             "connection": "keep-alive",
-             "x-amzn-requestid": "2cda4dc4-cca4-42e9-898b-e76efb4ba2f4",
-             "x-amz-apigw-id": "f-r9rE7pywMFtqQ=",
-             "x-amzn-trace-id": "Root=1-60af59f1-40276be638c707c4296e5051"
-           },
-           "RetryAttempts": 0
-         },
-         "FailedCount": 0,
-         "SuccessCount": 1,
-         "FailedFindings": []
-       }
-
+  return {
+    "ResponseMetadata": {
+      "RequestId": "2cda4dc4-cca4-42e9-898b-e76efb4ba2f4",
+      "HTTPStatusCode": 200,
+      "HTTPHeaders": {
+        "date": "Thu, 27 May 2021 08:36:01 GMT",
+        "content-type": "application/json",
+        "content-length": "54",
+        "connection": "keep-alive",
+        "x-amzn-requestid": "2cda4dc4-cca4-42e9-898b-e76efb4ba2f4",
+        "x-amz-apigw-id": "f-r9rE7pywMFtqQ=",
+        "x-amzn-trace-id": "Root=1-60af59f1-40276be638c707c4296e5051"
+      },
+      "RetryAttempts": 0
+    },
+    "FailedCount": 0,
+    "SuccessCount": 1,
+    "FailedFindings": []
+  }
 
 @pytest.fixture
 def lambda_context():
