@@ -39,6 +39,32 @@ def securityhub_successful_import():
   }
 
 @pytest.fixture
+def securityhub_successful_resolve():
+  return {
+    "ResponseMetadata": {
+      "RequestId": "2cda4dc4-cca4-42e9-898b-e76efb4ba2f4",
+      "HTTPStatusCode": 200,
+      "HTTPHeaders": {
+        "date": "Thu, 27 May 2021 08:36:01 GMT",
+        "content-type": "application/json",
+        "content-length": "54",
+        "connection": "keep-alive",
+        "x-amzn-requestid": "2cda4dc4-cca4-42e9-898b-e76efb4ba2f4",
+        "x-amz-apigw-id": "f-r9rE7pywMFtqQ=",
+        "x-amzn-trace-id": "Root=1-60af59f1-40276be638c707c4296e5051"
+      },
+      "RetryAttempts": 0
+    },
+    "ProcessedFindings": [
+      {
+        "Id": "576891938",
+        "ProductArn": "arn:aws:securityhub:ap-southeast-2:123456789:product/123456789/default"
+      }
+    ],
+    "UnprocessedFindings": []
+  }
+
+@pytest.fixture
 def lambda_context():
     @dataclass
     class LambdaContext:
@@ -155,6 +181,27 @@ def test_create_event(lambda_context, create_event, securityhub_successful_impor
   body = json.loads(resp['body'])
 
   assert body['message'] == 'Successfully imported finding'
+  assert body['statusCode'] == 200
+  assert resp['headers']['Content-Type'] == 'application/json'
+
+def test_resolve_event(lambda_context, resolve_event, securityhub_successful_resolve, securityhub_stub):
+  securityhub_stub.add_response(
+    "batch_update_findings", securityhub_successful_resolve
+  )
+
+  event = {
+    "body": json.dumps(resolve_event),
+    "path": "/",
+    "httpMethod": "POST",
+    "requestContext": {
+      "requestId": "c6af9ac6-7b61-11e6-9a41-93e8deadbeef"
+    }
+  }
+
+  resp = app.lambda_handler(event, lambda_context)
+  body = json.loads(resp['body'])
+
+  assert body['message'] == 'Successfully resolved finding'
   assert body['statusCode'] == 200
   assert resp['headers']['Content-Type'] == 'application/json'
 

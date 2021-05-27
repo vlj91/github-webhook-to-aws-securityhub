@@ -23,6 +23,46 @@ severity_levels = {
   'critical': 'CRITICAL'  
 }
 
+def resolve_finding(payload):
+  github_alert_id = payload['alert']['id']
+
+  resp = securityhub.batch_update_findings(
+    FindingIdentifiers=[
+      {
+        'Id': str(github_alert_id),
+        'ProductArn': 'arn:aws:securityhub:%s:%s:product/%s/default' % (AWS_REGION, AWS_ACCOUNT_ID, AWS_ACCOUNT_ID),
+      }
+    ],
+    Note={
+      'Text': 'Finding resolved',
+      'UpdatedBy': 'github-webhook'
+    },
+    Workflow={
+      'Status': 'RESOLVED'
+    }
+  )
+
+  if len(resp['ProcessedFindings']) >= 1:
+    metrics.add_metric(name="findings_resolved",
+                       unit=MetricUnit.Count,
+                       value=len(resp['ProcessedFindings'])
+    )
+
+    return {
+      "message": "Successfully resolved finding",
+      "statusCode": resp['ResponseMetadata']['HTTPStatusCode']
+    }
+  else:
+    metrics.add_metric(name="failed_resolve",
+                       unit=MetricUnit.Count,
+                       value=len(resp['UnprocessedFindings'])
+    )
+
+    return {
+      "message": "Failed to resolve finding",
+      "statusCode": resp['ResponseMetadata']['HTTPStatusCode']
+    }
+
 def create_finding(payload):
   repo_name = payload['repository']['name']
   repo_owner = payload['repository']['owner']['login']
@@ -33,7 +73,6 @@ def create_finding(payload):
   github_alert_id = payload['alert']['id']
 
   logger.info("Creating finding", extra=payload)
-  metrics.add_metric(name="finding_created", unit=MetricUnit.Count, value=1)
 
   resp = securityhub.batch_import_findings(
     Findings=[
@@ -61,7 +100,7 @@ def create_finding(payload):
         'Resources': [
           {
             'Type': 'Other',
-            'Id': str(github_alert_id),
+            'Id': payload['repository']['full_name'],
             'Details': {
               'Other': {
                 'github.com/repository.name': repo_name,
@@ -101,6 +140,8 @@ def process():
   action = app.current_event.json_body['action']
   if action == 'create':
     return create_finding(app.current_event.json_body)
+  elif action == 'resolve':
+    return resolve_finding(app.current_event.json_body)
   else:
     return Response(
       status_code=422,
