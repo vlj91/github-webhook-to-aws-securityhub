@@ -23,16 +23,6 @@ severity_levels = {
   'critical': 'CRITICAL'  
 }
 
-def securityhub_severity_level(github_level: str):
-  values = {
-    'Low': 'LOW',
-    'Moderate': 'MEDIUM',
-    'High': 'HIGH',
-    'Critical': 'CRITICAL'
-  }
-
-  return values[github_level]
-
 def create_finding(payload):
   repo_name = payload['repository']['name']
   repo_owner = payload['repository']['owner']['login']
