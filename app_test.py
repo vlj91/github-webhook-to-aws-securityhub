@@ -101,9 +101,9 @@ def create_event():
   }
 
 @pytest.fixture
-def dismiss_event():
+def invalid_action_event():
   return {
-    "action": "dismiss",
+    "action": "invalid_action",
     "alert": {
       "id": 576891938,
       "affected_range": "< 4.3.1",
@@ -112,12 +112,16 @@ def dismiss_event():
       "external_identifier": "CVE-2019-8331",
       "ghsa_id": "GHSA-9v3m-8fp8-mj99",
       "created_at": "2021-04-06T09:43:28Z",
+      "severity": "moderate",
       "fixed_in": "4.3.1"
     },
     "repository": {
       "id": 324689641,
       "name": "nrl",
       "full_name": "vlj91/nrl",
+      "owner": {
+        "login": "vlj91"
+      }
     }
   }
 
@@ -169,12 +173,17 @@ def test_create_event(lambda_context, create_event, securityhub_successful_impor
   )
 
   event = {
+    "version": "2.0",
+    "routeKey": "POST /",
     "body": json.dumps(create_event),
-    "path": "/",
-    "httpMethod": "POST",
+    "rawPath": "/",
     "requestContext": {
-      "requestId": "c6af9ac6-7b61-11e6-9a41-93e8deadbeef"
-    }
+      "http": {
+        "method": "POST",
+        "path": "/default/"
+      }
+    },
+    "requestId": "c6af9ac6-7b61-11e6-9a41-93e8deadbeef"
   }
 
   resp = app.lambda_handler(event, lambda_context)
@@ -190,12 +199,17 @@ def test_resolve_event(lambda_context, resolve_event, securityhub_successful_res
   )
 
   event = {
+    "version": "2.0",
+    "routeKey": "POST /",
     "body": json.dumps(resolve_event),
-    "path": "/",
-    "httpMethod": "POST",
+    "rawPath": "/",
     "requestContext": {
-      "requestId": "c6af9ac6-7b61-11e6-9a41-93e8deadbeef"
-    }
+      "http": {
+        "method": "POST",
+        "path": "/default/"
+      }
+    },
+    "requestId": "c6af9ac6-7b61-11e6-9a41-93e8deadbeef"
   }
 
   resp = app.lambda_handler(event, lambda_context)
@@ -205,13 +219,58 @@ def test_resolve_event(lambda_context, resolve_event, securityhub_successful_res
   assert body['statusCode'] == 200
   assert resp['headers']['Content-Type'] == 'application/json'
 
+def test_invalid_action(lambda_context, invalid_action_event):
+  event = {
+    "version": "2.0",
+    "routeKey": "POST /",
+    "body": json.dumps(invalid_action_event),
+    "rawPath": "/",
+    "requestContext": {
+      "http": {
+        "method": "POST",
+        "path": "/default/"
+      }
+    },
+    "requestId": "c6af9ac6-7b61-11e6-9a41-93e8deadbeef"
+  }
+
+  resp = app.lambda_handler(event, lambda_context)
+  body = json.loads(resp['body'])
+
+  assert body['message'] == 'Invalid event type'
+  assert resp['statusCode'] == 422
+  assert resp['headers']['Content-Type'] == 'application/json'
+
 def test_invalid_method(lambda_context):
   event = {
-    "path": "/",
-    "httpMethod": "GET",
+    "version": "2.0",
+    "routeKey": "GET /",
+    "rawPath": "/",
     "requestContext": {
-      "requestId": "c6af9ac6-7b61-11e6-9a41-93e8deadbeef"
+      "http": {
+        "method": "GET",
+        "path": "/default/"
+      }
     }
+  }
+
+  resp = app.lambda_handler(event, lambda_context)
+  assert resp['statusCode'] == 404
+  assert resp['headers']['Content-Type'] == 'application/json'
+
+def test_invalid_path(lambda_context, create_event):
+  event = {
+    "version": "2.0",
+    "routeKey": "POST /wrong_path",
+    "body": json.dumps(create_event),
+    "rawPath": "/wrong_path",
+    "requestContext": {
+      "http": {
+        "method": "POST",
+        "path": "/default/wrong_path"
+      }
+    },
+    "requestId": "c6af9ac6-7b61-11e6-9a41-93e8deadbeef"
   }
 
   resp = app.lambda_handler(event, lambda_context)

@@ -1,14 +1,14 @@
 from aws_lambda_powertools import Logger, Metrics
 from aws_lambda_powertools.logging import correlation_paths
 from aws_lambda_powertools.metrics import MetricUnit
-from aws_lambda_powertools.event_handler.api_gateway import ApiGatewayResolver, Response
+from aws_lambda_powertools.event_handler.api_gateway import ApiGatewayResolver, ProxyEventType, Response
 from datetime import datetime
 
 import boto3
 import json
 import os
 
-app = ApiGatewayResolver()
+app = ApiGatewayResolver(proxy_type=ProxyEventType.APIGatewayProxyEventV2)
 logger = Logger(service="github-webhook")
 metrics = Metrics(service="github-webhook", namespace="service")
 securityhub = boto3.client('securityhub')
