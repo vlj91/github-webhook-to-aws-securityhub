@@ -28,6 +28,14 @@ data "aws_iam_policy_document" "ci_ecr_push" {
   }
 }
 
+data "aws_iam_policy_document" "ci_update_parameter_store" {
+  statement {
+    effect = "Allow"
+    actions = ["ssm:PutParameter"]
+    resources = [aws_ssm_parameter.image_version.arn]
+  }
+}
+
 module "ci_iam_user" {
   source = "terraform-aws-modules/iam/aws//modules/iam-user"
   version = "~> 3.0"
@@ -56,8 +64,12 @@ module "ci_iam_group" {
 
   custom_group_policies = [
     {
-      name = "PushToECR"
+      name = "ci_ecr_push"
       policy = data.aws_iam_policy_document.ci_ecr_push.json
+    },
+    {
+      name = "ci_update_parameter_store"
+      policy = data.aws_iam_policy_document.ci_update_parameter_store.json
     }
   ]
 }
