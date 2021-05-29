@@ -1,3 +1,6 @@
+data "aws_caller_identity" "current" {}
+data "aws_region" "current" {}
+
 resource "aws_ssm_parameter" "image_version" {
   name = "/service/github-webhook-to-securityhub/image_version"
   type = "String"
@@ -22,6 +25,20 @@ resource "aws_ecr_repository" "this" {
   }
 }
 
+data "aws_iam_policy_document" "function" {
+  statement {
+    effect = "Allow"
+    actions = ["securityhub:BatchImportFindings"]
+    resources = ["arn:aws:securityhub:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:hub/default"]
+  }
+
+  statement {
+    effect = "Allow"
+    actions = ["securityhub:BatchUpdateFindings"]
+    resources = ["*"]
+  }
+}
+
 module "function" {
   source = "terraform-aws-modules/lambda/aws"
 
@@ -31,6 +48,8 @@ module "function" {
   package_type   = "Image"
   image_uri      = "${aws_ecr_repository.this.repository_url}:${data.aws_ssm_parameter.image_version.value}"
   publish = true
+  attach_policy_json = true
+  policy_json = data.aws_iam_policy_document.function.json
 
   allowed_triggers = {
     APIGatewayPost = {

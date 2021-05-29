@@ -7,6 +7,7 @@ from datetime import datetime
 import boto3
 import json
 import os
+import requests
 
 app = ApiGatewayResolver(proxy_type=ProxyEventType.APIGatewayProxyEventV2)
 logger = Logger(service="github-webhook")
@@ -17,11 +18,16 @@ AWS_ACCOUNT_ID = os.environ.get('AWS_ACCOUNT_ID', '123456789')
 AWS_REGION = os.environ.get('AWS_REGION', 'ap-southeast-2')
 
 severity_levels = {
-  'low': 'LOW',
-  'moderate': 'MEDIUM',
-  'high': 'HIGH',
-  'critical': 'CRITICAL'  
+  'Low': 'LOW',
+  'Moderate': 'MEDIUM',
+  'High': 'HIGH',
+  'Critical': 'CRITICAL'  
 }
+
+def cve_info(id):
+  resp = requests.get('https://access.redhat.com/labs/securitydataapi/cve/%s' % id)
+  if resp.ok:
+    return resp.json()
 
 def resolve_finding(payload):
   github_alert_id = payload['alert']['id']
@@ -69,8 +75,9 @@ def create_finding(payload):
   package_name = payload['alert']['affected_package_name']
   cve_id = payload['alert']['external_identifier']
   fixed_in = payload['alert']['fixed_in']
-  severity = payload['alert']['severity']
   github_alert_id = payload['alert']['id']
+  info = cve_info(cve_id)
+  severity = info['threat_severity']
 
   logger.info("Creating finding", extra=payload)
 
