@@ -51,3 +51,10 @@ jobs:
       run: |
         docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
         docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+        
+    - name: Update image_version parameter
+      env:
+        IMAGE_TAG: ${{ github.sha }}
+      run: |
+        aws ssm put-parameter --name /service/github-webhook-to-securityhub/image_version --value "$IMAGE_TAG"
+      
