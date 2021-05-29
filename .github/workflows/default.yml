@@ -56,5 +56,5 @@ jobs:
       env:
         IMAGE_TAG: ${{ github.sha }}
       run: |
-        aws ssm put-parameter --name /service/github-webhook-to-securityhub/image_version --value "$IMAGE_TAG"
+        aws ssm put-parameter --overwrite --name /service/github-webhook-to-securityhub/image_version --value "$IMAGE_TAG"
       
