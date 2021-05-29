@@ -2,6 +2,7 @@ from aws_lambda_powertools import Logger, Metrics
 from aws_lambda_powertools.logging import correlation_paths
 from aws_lambda_powertools.metrics import MetricUnit
 from aws_lambda_powertools.event_handler.api_gateway import ApiGatewayResolver, ProxyEventType, Response
+from aws_lambda_powertools.utilities import parameters
 from datetime import datetime
 
 import boto3
@@ -12,6 +13,7 @@ app = ApiGatewayResolver(proxy_type=ProxyEventType.APIGatewayProxyEventV2)
 logger = Logger(service="github-webhook")
 metrics = Metrics(service="github-webhook", namespace="service")
 securityhub = boto3.client('securityhub')
+github_secrets = parameters.get_secret("/service/github-webhook-to-securityhub/github_secrets", max_age=60).split(",")
 
 AWS_ACCOUNT_ID = os.environ.get('AWS_ACCOUNT_ID', '123456789')
 AWS_REGION = os.environ.get('AWS_REGION', 'ap-southeast-2')
@@ -22,6 +24,22 @@ severity_levels = {
   'high': 'HIGH',
   'critical': 'CRITICAL'  
 }
+
+def verify_valid_signature(event):
+  failed_signatures = []
+  
+  for secret in github_secrets:
+    key = bytes(secret, 'utf-8')
+    expected_signature = hmac.new(key=key, msg=event['body'], digestmod=hashlib.sha256)
+    incoming_signature = event['headers']['x-hub-signature-256'].split('sha256=')[-1].strip()
+
+    if not hmac.compare_digest(incoming_signature, expected_signature):
+      failed_signatures.append(incoming_signature)
+
+  if len(failed_signatures) >= len(github_secrets):
+    return False
+  else:
+    return True
 
 def resolve_finding(payload):
   github_alert_id = payload['alert']['id']
@@ -137,6 +155,8 @@ def create_finding(payload):
 
 @app.post("/")
 def process():
+  verify_valid_signature(app.current_event.json_body)
+
   action = app.current_event.json_body['action']
   if action == 'create':
     return create_finding(app.current_event.json_body)

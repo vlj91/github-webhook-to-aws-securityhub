@@ -17,6 +17,10 @@ def securityhub_stub():
   securityhub_stub.deactivate()
 
 @pytest.fixture
+def github_secret():
+  return '58aa89c756c8892962c159f0532fe93483b067ee'
+
+@pytest.fixture
 def securityhub_successful_import():
   return {
     "ResponseMetadata": {
@@ -193,7 +197,7 @@ def test_create_event(lambda_context, create_event, securityhub_successful_impor
   assert body['statusCode'] == 200
   assert resp['headers']['Content-Type'] == 'application/json'
 
-def test_resolve_event(lambda_context, resolve_event, securityhub_successful_resolve, securityhub_stub):
+def test_resolve_event(lambda_context, resolve_event, securityhub_successful_resolve, securityhub_stub, valid_github_secret):
   securityhub_stub.add_response(
     "batch_update_findings", securityhub_successful_resolve
   )
@@ -203,6 +207,9 @@ def test_resolve_event(lambda_context, resolve_event, securityhub_successful_res
     "routeKey": "POST /",
     "body": json.dumps(resolve_event),
     "rawPath": "/",
+    "headers": {
+      "X-Hub-Signature-256": valid_github_secret
+    },
     "requestContext": {
       "http": {
         "method": "POST",
