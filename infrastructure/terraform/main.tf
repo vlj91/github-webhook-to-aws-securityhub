@@ -30,11 +30,12 @@ module "function" {
   create_package = false
   package_type   = "Image"
   image_uri      = "${aws_ecr_repository.this.repository_url}:${data.aws_ssm_parameter.image_version.value}"
+  publish = true
 
   allowed_triggers = {
     APIGatewayPost = {
       service = "apigateway"
-      source_arn = "arn:aws:execute-api:eu-west-1:135367859851:aqnku8akd0/dev/POST/*"
+      source_arn = "${module.api_gateway.apigatewayv2_api_execution_arn}/*/*/*"
     }
   }
 }
@@ -53,7 +54,7 @@ module "api_gateway" {
   cors_configuration = {
     allow_headers = ["accept", "content-type", "user-agent", "x-github-delivery", "x-github-event", "x-github-hook-id", "x-github-hook-installation-target-id", "x-github-hook-installation-target-type"]
     allow_methods = ["POST"]
-    allow_origins = ["github.com"]
+    allow_origins = ["*"]
   }
 
   default_stage_access_log_destination_arn = aws_cloudwatch_log_group.access_logs.arn
