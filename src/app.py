@@ -88,14 +88,26 @@ def create_finding(payload):
         'AwsAccountId': AWS_ACCOUNT_ID,
         'CreatedAt': datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
         'UpdatedAt': datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
-        'Title': '%s affected by %s' % (package_name, cve_id),
-        'Description': '%s package %s affected by %s, fixed in %s' % (repo_name, package_name, cve_id, fixed_in),
+        'Title': info['bugzilla']['description'],
+        'Description': info['details'][0],
         'GeneratorId': 'github',
         'Id': str(github_alert_id),
         'ProductArn': 'arn:aws:securityhub:%s:%s:product/%s/default' % (AWS_REGION, AWS_ACCOUNT_ID, AWS_ACCOUNT_ID),
         'Severity': {
           'Label': severity_levels.get(severity)
         },
+        'Vulnerabilities': [
+          {
+            'Cvss': [
+              {
+                'BaseScore': float(info['cvss3']['cvss3_base_score']),
+                'BaseVector': info['cvss3']['cvss3_scoring_vector']
+              }
+            ],
+            'Id': info['bugzilla']['id'],
+            'ReferenceUrls': [info['bugzilla']['url']]
+          }
+        ],
         'FindingProviderFields': {
           'Severity': {
             'Label': severity_levels.get(severity)
