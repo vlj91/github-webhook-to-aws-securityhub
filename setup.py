@@ -6,7 +6,7 @@ setuptools.setup(
     author="vlj91",
     url="https://github.com/vlj91/github-webhook-to-securityhub",
     packages=[
-        'app',
+        'src.app',
     ],
     python_requires=">=3.8"
 )
