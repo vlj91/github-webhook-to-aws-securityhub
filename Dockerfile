@@ -30,7 +30,7 @@ ARG APP_DIR
 RUN mkdir -pv ${APP_DIR}
 RUN python -m pip install awslambdaric --target ${APP_DIR}/site-packages
 COPY . ${APP_DIR}
-RUN python -m pip install ${APP_DIR}/src/ --target ${APP_DIR}/site-packages -r ${APP_DIR}/requirements.txt
+RUN python -m pip install ${APP_DIR}/ --target ${APP_DIR}/site-packages -r ${APP_DIR}/requirements.txt
 
 # Final runtime image
 FROM python-alpine
