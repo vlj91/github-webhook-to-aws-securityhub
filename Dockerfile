@@ -42,4 +42,4 @@ ADD https://github.com/aws/aws-lambda-runtime-interface-emulator/releases/latest
 COPY entrypoint.sh /
 RUN chmod 755 /usr/bin/aws-lambda-rie /entrypoint.sh
 ENTRYPOINT ["/entrypoint.sh"]
-CMD ["app.lambda_handler"]
+CMD ["src.app.lambda_handler"]
