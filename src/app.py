@@ -18,7 +18,7 @@ aws_account_id = os.environ.get('AWS_ACCOUNT_ID', '123456789')
 aws_region = os.environ.get('AWS_REGION', 'ap-southeast-2')
 
 # Return the severity level using the payloads from GitHub and RedHat
-def get_severity(github_payload, redhat_payload):
+def get_severity(level):
   levels = {
     'low': 'LOW',
     'moderate': 'MEDIUM',
@@ -26,10 +26,7 @@ def get_severity(github_payload, redhat_payload):
     'critical': 'CRITICAL'
   }
 
-  try:
-    return levels[redhat_payload['threat_severity'].lower()]
-  except (AttributeError, KeyError) as err:
-    return levels[github_payload['alert']['severity'].lower()]
+  return levels[level.lower()]
 
 def cve_info(payload):
   resp = requests.get('https://access.redhat.com/labs/securitydataapi/cve/%s' % payload['alert']['external_identifier'])
@@ -102,7 +99,7 @@ def create_finding(payload):
   fixed_in = payload['alert']['fixed_in']
   github_alert_id = payload['alert']['id']
   redhat_info = cve_info(payload)
-  severity = get_severity(payload, redhat_info)
+  severity = get_severity(redhat_info['threat_severity'])
 
   findings = [{
     'SchemaVersion': '2018-10-08',
