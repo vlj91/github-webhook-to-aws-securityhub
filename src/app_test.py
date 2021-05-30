@@ -308,7 +308,8 @@ def test_get_severity_valid_payloads():
 
 def test_extra_cve_info_valid_cve(redhat_cve_info, requests_mock):
     cve_id = 'CVE-2019-8331'
-    requests_mock.get("https://access.redhat.com/labs/securitydataapi/cve/{}".format(cve_id, text=redhat_cve_info)
+    url = "https://access.redhat.com/labs/securitydataapi/cve/{}".format(cve_id)
+    requests_mock.get(url, text=redhat_cve_info)
     resp = extra_cve_info(cve_id)
 
     assert resp['Title'] == redhat_cve_info['bugzilla']['description']
@@ -317,12 +318,10 @@ def test_extra_cve_info_valid_cve(redhat_cve_info, requests_mock):
     assert len(resp['Vulnerabilities'][0]['Cvss']) == 1
     assert len(resp['ReferenceUrls']) >= 1
 
-def test_extra_cve_info_invalid_cve(requests_stub):
-    requests_stub.add_response(
-      "get", {}
-    )
-
+def test_extra_cve_info_invalid_cve(requests_mock):
     cve_id = 'CVE-BLA-BLA'
+    url = "https://access.redhat.com/labs/securitydataapi/cve/{}".format(cve_id)
+    requests_mock.get(url, text={})
     resp = extra_cve_info(cve_id)
 
     assert resp == {}
