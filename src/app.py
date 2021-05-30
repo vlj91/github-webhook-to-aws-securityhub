@@ -118,6 +118,7 @@ def create_finding(payload):
     'Resources': [{
       'Type': 'Other',
       'Id': '%s/%s/%s' % (repo_name, package_name, cve_id),
+      'Region': aws_region,
       'Details': {
         'Other': {
           'github.com/repository.name': payload['repository']['name'],
