@@ -4,11 +4,11 @@ from unittest.mock import call
 from botocore.stub import Stubber
 
 from app import securityhub
-from app import requests
 
 import json
 import pytest
 import app
+import requests
 
 @pytest.fixture
 def securityhub_stub():
@@ -16,13 +16,6 @@ def securityhub_stub():
   securityhub_stub.activate()
   yield securityhub_stub
   securityhub_stub.deactivate()
-
-@pytest.fixture
-def requests_stub():
-  requests_stub = Stubber(requests)
-  requests_stub.activate()
-  yield requests_stub
-  requests_stub.deactivate()
 
 @pytest.fixture
 def securityhub_successful_import():
@@ -313,12 +306,9 @@ def test_get_severity_valid_payloads():
   assert app.get_severity('High') == 'HIGH'
   assert app.get_severity('Critical') == 'CRITICAL'
 
-def test_extra_cve_info_valid_cve(redhat_cve_info, requests_stub):
-    requests_stub.add_response(
-      "get", redhat_cve_info
-    )
-
+def test_extra_cve_info_valid_cve(redhat_cve_info, requests_mock):
     cve_id = 'CVE-2019-8331'
+    requests_mock.get("https://access.redhat.com/labs/securitydataapi/cve/{}".format(cve_id, text=redhat_cve_info)
     resp = extra_cve_info(cve_id)
 
     assert resp['Title'] == redhat_cve_info['bugzilla']['description']
