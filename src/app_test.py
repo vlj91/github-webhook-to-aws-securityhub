@@ -285,7 +285,7 @@ def test_get_severity_valid_payloads():
 
 def test_extra_cve_info_valid_cve():
     cve_id = 'CVE-2019-8331'
-    resp = extra_cve_info(cve_id)
+    resp = app.extra_cve_info(cve_id)
 
     assert resp['Title'] == redhat_cve_info['bugzilla']['description']
     assert resp['Description'] == redhat_cve_info['details'][0]
@@ -295,6 +295,6 @@ def test_extra_cve_info_valid_cve():
 
 def test_extra_cve_info_invalid_cve():
     cve_id = 'CVE-BLA-BLA'
-    resp = extra_cve_info(cve_id)
+    resp = app.extra_cve_info(cve_id)
 
     assert resp == {}
