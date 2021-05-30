@@ -287,8 +287,6 @@ def test_extra_cve_info_valid_cve():
     cve_id = 'CVE-2019-8331'
     resp = app.extra_cve_info(cve_id)
 
-    assert resp['Title'] == redhat_cve_info['bugzilla']['description']
-    assert resp['Description'] == redhat_cve_info['details'][0]
     assert len(resp['Vulnerabilities']) == 1
     assert len(resp['Vulnerabilities'][0]['Cvss']) == 1
     assert len(resp['ReferenceUrls']) >= 1
