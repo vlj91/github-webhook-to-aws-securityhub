@@ -37,6 +37,11 @@ def cve_info(payload):
     return {
       'Title': body['bugzilla']['description'],
       'Description': body['details'][0],
+      'Severity': { 'Label': body['threat_severity'] },
+      'FindingProviderFields': {
+        'Severity': { 'Label': body['threat_severity'] },
+        'Types': ['Software and Configuration Checks/Vulnerabilities/CVE']
+      },
       'Vulnerabilities': [{
         'Cvss': [{
           'BaseScore': float(body['cvss3']['cvss3_base_score']),
@@ -99,7 +104,6 @@ def create_finding(payload):
   fixed_in = payload['alert']['fixed_in']
   github_alert_id = payload['alert']['id']
   redhat_info = cve_info(payload)
-  severity = get_severity(redhat_info['threat_severity'])
 
   findings = [{
     'SchemaVersion': '2018-10-08',
@@ -111,11 +115,6 @@ def create_finding(payload):
     'ProductArn': 'arn:aws:securityhub:%s:%s:product/%s/default' % (aws_region, aws_account_id, aws_account_id),
     'Title': '%s %s' % (payload['alert']['affected_package_name'], payload['alert']['fixed_in']),
     'Description': payload['alert']['affected_package_name'],
-    'Severity': { 'Label': severity },
-    'FindingProviderFields': {
-      'Severity': { 'Label': severity },
-      'Types': ['Software and Configuration Checks/Vulnerabilities/CVE']
-    },
     'Resources': [{
       'Type': 'Other',
       'Id': '%s/%s/%s' % (repo_name, package_name, cve_id),
@@ -129,7 +128,6 @@ def create_finding(payload):
   }]
 
   logger.info("Importing finding", extra=findings[0])
-
   resp = securityhub.batch_import_findings(Findings=findings)
   if resp['SuccessCount'] >= 1:
     metrics.add_metric(name="create_success",
