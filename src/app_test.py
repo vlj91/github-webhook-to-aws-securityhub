@@ -4,11 +4,11 @@ from unittest.mock import call
 from botocore.stub import Stubber
 
 from app import securityhub
+from app import requests
 
 import json
 import pytest
 import app
-import requests
 
 @pytest.fixture
 def securityhub_stub():
