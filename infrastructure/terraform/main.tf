@@ -51,6 +51,10 @@ module "function" {
   attach_policy_json = true
   policy_json        = data.aws_iam_policy_document.function.json
 
+  environment_variables = {
+    "AWS_ACCOUNT_ID"     = data.aws_caller_identity.current.account_id
+  }
+
   allowed_triggers = {
     APIGatewayPost = {
       service    = "apigateway"

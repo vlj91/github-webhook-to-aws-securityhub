@@ -128,9 +128,10 @@ def create_finding(payload):
     }]
   }]
 
-  logger.info("Importing finding", extra=findings[0])
+  logger.info("Attempting to import finding", extra=findings[0])
   resp = securityhub.batch_import_findings(Findings=findings)
   if resp['SuccessCount'] >= 1:
+    logger.info("Successfully imported finding", extra=findings[0])
     metrics.add_metric(name="create_success",
                        unit=MetricUnit.Count,
                        value=resp['SuccessCount']
@@ -141,6 +142,7 @@ def create_finding(payload):
       "statusCode": resp['ResponseMetadata']['HTTPStatusCode']
     }
   else:
+    logger.info("Failed to import finding", extra=findings[0])
     metrics.add_metric(name="create_failure",
                        unit=MetricUnit.Count,
                        value=resp['FailedCount']
