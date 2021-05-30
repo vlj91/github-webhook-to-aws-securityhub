@@ -30,7 +30,7 @@ def get_severity(level):
 def extra_cve_info(cve):
   resp = requests.get('https://access.redhat.com/labs/securitydataapi/cve/%s' % cve)
 
-  if resp.ok:
+  if resp.ok and resp.text != "Match not found.":
     body = resp.json()
 
     return {
