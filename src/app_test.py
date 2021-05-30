@@ -276,3 +276,39 @@ def test_invalid_path(lambda_context, create_event):
   resp = app.lambda_handler(event, lambda_context)
   assert resp['statusCode'] == 404
   assert resp['headers']['Content-Type'] == 'application/json'
+
+def test_get_severity_valid_payloads():
+  github_payload = {
+    'alert': {
+      'severity': 'Low'
+    }
+  }
+
+  redhat_payload = {
+    'threat_severity': 'Low'
+  }
+
+  resp = app.get_severity(github_payload, redhat_payload)
+  assert resp == 'LOW'
+
+def test_get_severity_invalid_redhat_payload():
+  github_payload = {
+    'alert': {
+      'severity': 'Low'
+    }
+  }
+
+  redhat_payload = {}
+
+  resp = app.get_severity(github_payload, redhat_payload)
+  assert resp == 'LOW'
+
+def test_get_severity_invalid_github_payload():
+  github_payload = {}
+
+  redhat_payload = {
+    'threat_severity': 'Low'
+  }
+
+  resp = app.get_severity(github_payload, redhat_payload)
+  assert resp == 'LOW'

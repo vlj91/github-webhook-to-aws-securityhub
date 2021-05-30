@@ -14,20 +14,46 @@ logger = Logger(service="github-webhook")
 metrics = Metrics(service="github-webhook", namespace="service")
 securityhub = boto3.client('securityhub')
 
-AWS_ACCOUNT_ID = os.environ.get('AWS_ACCOUNT_ID', '123456789')
-AWS_REGION = os.environ.get('AWS_REGION', 'ap-southeast-2')
+aws_account_id = os.environ.get('AWS_ACCOUNT_ID', '123456789')
+aws_region = os.environ.get('AWS_REGION', 'ap-southeast-2')
 
-severity_levels = {
-  'Low': 'LOW',
-  'Moderate': 'MEDIUM',
-  'High': 'HIGH',
-  'Critical': 'CRITICAL'  
-}
+# Return the severity level using the payloads from GitHub and RedHat
+def get_severity(github_payload, redhat_payload):
+  levels = {
+    'low': 'LOW',
+    'moderate': 'MEDIUM',
+    'high': 'HIGH',
+    'critical': 'CRITICAL'
+  }
 
-def cve_info(id):
-  resp = requests.get('https://access.redhat.com/labs/securitydataapi/cve/%s' % id)
+  try:
+    return levels[redhat_payload['threat_severity'].lower()]
+  except (AttributeError, KeyError) as err:
+    return levels[github_payload['alert']['severity'].lower()]
+
+def cve_info(payload):
+  resp = requests.get('https://access.redhat.com/labs/securitydataapi/cve/%s' % payload['alert']['external_identifier'])
+
   if resp.ok:
-    return resp.json()
+    body = resp.json()
+
+    i = {
+      'Title': body['bugzilla']['description'],
+      'Description': body['details'][0],
+      'Vulnerabilities': [{
+        'Cvss': [{
+          'BaseScore': float(body['cvss3']['cvss3_base_score']),
+          'BaseVector': body['cvss3']['cvss3_scoring_vector']
+        }],
+        'Id': body['bugzilla']['id'],
+        'ReferenceUrls': [body['bugzilla']['url']]
+      }]
+    }
+
+    return i
+  else:
+    return {}
+
 
 def resolve_finding(payload):
   github_alert_id = payload['alert']['id']
@@ -36,7 +62,7 @@ def resolve_finding(payload):
     FindingIdentifiers=[
       {
         'Id': str(github_alert_id),
-        'ProductArn': 'arn:aws:securityhub:%s:%s:product/%s/default' % (AWS_REGION, AWS_ACCOUNT_ID, AWS_ACCOUNT_ID),
+        'ProductArn': 'arn:aws:securityhub:%s:%s:product/%s/default' % (aws_region, aws_account_id, aws_account_id),
       }
     ],
     Note={
@@ -70,71 +96,48 @@ def resolve_finding(payload):
     }
 
 def create_finding(payload):
+  # Set some of these as vars as they get reused a few times
   repo_name = payload['repository']['name']
   repo_owner = payload['repository']['owner']['login']
   package_name = payload['alert']['affected_package_name']
   cve_id = payload['alert']['external_identifier']
   fixed_in = payload['alert']['fixed_in']
   github_alert_id = payload['alert']['id']
-  info = cve_info(cve_id)
-  severity = info['threat_severity']
+  redhat_info = cve_info(payload)
+  severity = get_severity(payload, redhat_info)
 
-  logger.info("Creating finding", extra=payload)
-
-  resp = securityhub.batch_import_findings(
-    Findings=[
-      {
-        'SchemaVersion': '2018-10-08',
-        'AwsAccountId': AWS_ACCOUNT_ID,
-        'CreatedAt': datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
-        'UpdatedAt': datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
-        'Title': info['bugzilla']['description'],
-        'Description': info['details'][0],
-        'GeneratorId': 'github',
-        'Id': str(github_alert_id),
-        'ProductArn': 'arn:aws:securityhub:%s:%s:product/%s/default' % (AWS_REGION, AWS_ACCOUNT_ID, AWS_ACCOUNT_ID),
-        'Severity': {
-          'Label': severity_levels.get(severity)
-        },
-        'Vulnerabilities': [
-          {
-            'Cvss': [
-              {
-                'BaseScore': float(info['cvss3']['cvss3_base_score']),
-                'BaseVector': info['cvss3']['cvss3_scoring_vector']
-              }
-            ],
-            'Id': info['bugzilla']['id'],
-            'ReferenceUrls': [info['bugzilla']['url']]
-          }
-        ],
-        'FindingProviderFields': {
-          'Severity': {
-            'Label': severity_levels.get(severity)
-          },
-          'Types': [
-            'Software and Configuration Checks/Vulnerabilities/CVE'
-          ]
-        },
-        'Resources': [
-          {
-            'Type': 'Other',
-            'Id': payload['repository']['full_name'],
-            'Details': {
-              'Other': {
-                'github.com/repository.name': repo_name,
-                'github.com/repository.owner': repo_owner
-              }
-            }
-          }
-        ]
+  findings = [{
+    'SchemaVersion': '2018-10-08',
+    'AwsAccountId': aws_account_id,
+    'CreatedAt': datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
+    'UpdatedAt': datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
+    'GeneratorId': 'github',
+    'Id': str(payload['alert']['id']),
+    'ProductArn': 'arn:aws:securityhub:%s:%s:product/%s/default' % (aws_region, aws_account_id, aws_account_id),
+    'Title': '%s %s' % (payload['alert']['affected_package_name'], payload['alert']['fixed_in']),
+    'Description': payload['alert']['affected_package_name'],
+    'Severity': { 'Label': severity },
+    'FindingProviderFields': {
+      'Severity': { 'Label': severity },
+      'Types': ['Software and Configuration Checks/Vulnerabilities/CVE']
+    },
+    'Resources': [{
+      'Type': 'Other',
+      'Id': '%s/%s/%s' % (repo_name, package_name, cve_id),
+      'Details': {
+        'Other': {
+          'github.com/repository.name': payload['repository']['name'],
+          'github.com/repository.owner': payload['repository']['owner']['login']
+        }
       }
-    ]
-  )
+    }]
+  }]
 
-  logger.info(json.dumps(resp))
+  logger.info("Importing finding", extra=findings[0])
+
+  resp = securityhub.batch_import_findings(Findings=findings)
   if resp['SuccessCount'] >= 1:
-    metrics.add_metric(name="findings_created",
+    metrics.add_metric(name="create_success",
                        unit=MetricUnit.Count,
                        value=resp['SuccessCount']
     )
@@ -144,7 +147,7 @@ def create_finding(payload):
       "statusCode": resp['ResponseMetadata']['HTTPStatusCode']
     }
   else:
-    metrics.add_metric(name="failed_creations",
+    metrics.add_metric(name="create_failure",
                        unit=MetricUnit.Count,
                        value=resp['FailedCount']
     )
@@ -154,21 +157,25 @@ def create_finding(payload):
       "statusCode": resp['ResponseMetadata']['HTTPStatusCode']
     }
 
+# TODO: verify github signature
 @app.post("/")
 def process():
   action = app.current_event.json_body['action']
   if action == 'create':
+    metrics.add_metric(name="create_event", unit=MetricUnit.Count, value=1)
     return create_finding(app.current_event.json_body)
   elif action == 'resolve':
+    metrics.add_metric(name="resolve_event", unit=MetricUnit.Count, value=1)
     return resolve_finding(app.current_event.json_body)
   else:
+    metrics.add_metric(name="invalid_event", unit=MetricUnit.Count, value=1)
     return Response(
       status_code=422,
       content_type="application/json",
       body=json.dumps({"message": "Invalid event type"})
     )
 
-@metrics.log_metrics
+@metrics.log_metrics(raise_on_empty_metrics=False)
 @logger.inject_lambda_context(correlation_id_path=correlation_paths.API_GATEWAY_REST)
 def lambda_handler(event, context):
   return app.resolve(event, context)
