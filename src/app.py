@@ -9,7 +9,6 @@ import json
 import os
 import requests
 
-
 aws_account_id = os.environ.get('AWS_ACCOUNT_ID', '123456789')
 aws_region = os.environ.get('AWS_REGION', 'ap-southeast-2')
 app = ApiGatewayResolver(proxy_type=ProxyEventType.APIGatewayProxyEventV2)
@@ -28,8 +27,8 @@ def get_severity(level):
 
   return levels[level.lower()]
 
-def cve_info(payload):
-  resp = requests.get('https://access.redhat.com/labs/securitydataapi/cve/%s' % payload['alert']['external_identifier'])
+def extra_cve_info(cve):
+  resp = requests.get('https://access.redhat.com/labs/securitydataapi/cve/%s' % cve)
 
   if resp.ok:
     body = resp.json()
@@ -103,7 +102,7 @@ def create_finding(payload):
   cve_id = payload['alert']['external_identifier']
   fixed_in = payload['alert']['fixed_in']
   github_alert_id = payload['alert']['id']
-  redhat_info = cve_info(payload)
+  redhat_info = extra_cve_info(cve_id)
 
   findings = [{
     'SchemaVersion': '2018-10-08',

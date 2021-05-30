@@ -17,6 +17,13 @@ def securityhub_stub():
   securityhub_stub.deactivate()
 
 @pytest.fixture
+def requests_stub():
+  requests_stub = Stubber(requests)
+  requests_stub.activate()
+  yield requests_stub
+  requests_stub.deactivate()
+
+@pytest.fixture
 def securityhub_successful_import():
   return {
     "ResponseMetadata": {
@@ -62,6 +69,28 @@ def securityhub_successful_resolve():
       }
     ],
     "UnprocessedFindings": []
+  }
+
+@pytest.fixture
+def redhat_cve_info():
+  # Trimmed down payload containing the things we care about
+  return {
+    "threat_severity": "Moderate",
+    "bugzilla": {
+      "description": "CVE-2019-8331 bootstrap: XSS in the tooltip or popover data-template attribute",
+      "id": "1686454",
+      "url": "https://bugzilla.redhat.com/show_bug.cgi?id=1686454"
+    },
+    "cvss3": {
+      "cvss3_base_score": "6.1",
+      "cvss3_scoring_vector": "CVSS:3.0/AV:N/AC:L/PR:N/UI:R/S:C/C:L/I:L/A:N",
+      "status": "verified"
+    },
+    "details": [
+      "In Bootstrap before 3.4.1 and 4.3.x before 4.3.1, XSS is possible in the tooltip or popover data-template attribute.",
+      "A cross-site scripting vulnerability was discovered in bootstrap. If an attacker could control the data given to tooltip or popover, they could inject HTML or Javascript into the rendered page when tooltip or popover events fired."
+    ],
+    "statement": "Red Hat CloudForms 4.6 and newer versions include the vulnerable component, but there is no risk of exploitation since there is no possible vector to access the vulnerability. Older Red Hat CloudForms versions don't use the vulnerable component at all."
   }
 
 @pytest.fixture
@@ -283,3 +312,26 @@ def test_get_severity_valid_payloads():
   assert app.get_severity('High') == 'HIGH'
   assert app.get_severity('Critical') == 'CRITICAL'
 
+def test_extra_cve_info_valid_cve(redhat_cve_info, requests_stub):
+    requests_stub.add_response(
+      "get", redhat_cve_info
+    )
+
+    cve_id = 'CVE-2019-8331'
+    resp = extra_cve_info(cve_id)
+
+    assert resp['Title'] == redhat_cve_info['bugzilla']['description']
+    assert resp['Description'] == redhat_cve_info['details'][0]
+    assert len(resp['Vulnerabilities']) == 1
+    assert len(resp['Vulnerabilities'][0]['Cvss']) == 1
+    assert len(resp['ReferenceUrls']) >= 1
+
+def test_extra_cve_info_invalid_cve(requests_stub):
+    requests_stub.add_response(
+      "get", {}
+    )
+
+    cve_id = 'CVE-BLA-BLA'
+    resp = extra_cve_info(cve_id)
+
+    assert resp == {}
