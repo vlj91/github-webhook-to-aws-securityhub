@@ -8,7 +8,6 @@ from app import securityhub
 import json
 import pytest
 import app
-import requests
 
 @pytest.fixture
 def securityhub_stub():
@@ -63,28 +62,6 @@ def securityhub_successful_resolve():
       }
     ],
     "UnprocessedFindings": []
-  }
-
-@pytest.fixture
-def redhat_cve_info():
-  # Trimmed down payload containing the things we care about
-  return {
-    "threat_severity": "Moderate",
-    "bugzilla": {
-      "description": "CVE-2019-8331 bootstrap: XSS in the tooltip or popover data-template attribute",
-      "id": "1686454",
-      "url": "https://bugzilla.redhat.com/show_bug.cgi?id=1686454"
-    },
-    "cvss3": {
-      "cvss3_base_score": "6.1",
-      "cvss3_scoring_vector": "CVSS:3.0/AV:N/AC:L/PR:N/UI:R/S:C/C:L/I:L/A:N",
-      "status": "verified"
-    },
-    "details": [
-      "In Bootstrap before 3.4.1 and 4.3.x before 4.3.1, XSS is possible in the tooltip or popover data-template attribute.",
-      "A cross-site scripting vulnerability was discovered in bootstrap. If an attacker could control the data given to tooltip or popover, they could inject HTML or Javascript into the rendered page when tooltip or popover events fired."
-    ],
-    "statement": "Red Hat CloudForms 4.6 and newer versions include the vulnerable component, but there is no risk of exploitation since there is no possible vector to access the vulnerability. Older Red Hat CloudForms versions don't use the vulnerable component at all."
   }
 
 @pytest.fixture
@@ -306,10 +283,8 @@ def test_get_severity_valid_payloads():
   assert app.get_severity('High') == 'HIGH'
   assert app.get_severity('Critical') == 'CRITICAL'
 
-def test_extra_cve_info_valid_cve(redhat_cve_info, requests_mock):
+def test_extra_cve_info_valid_cve():
     cve_id = 'CVE-2019-8331'
-    url = "https://access.redhat.com/labs/securitydataapi/cve/{}".format(cve_id)
-    requests_mock.get(url, text=redhat_cve_info)
     resp = extra_cve_info(cve_id)
 
     assert resp['Title'] == redhat_cve_info['bugzilla']['description']
@@ -318,10 +293,8 @@ def test_extra_cve_info_valid_cve(redhat_cve_info, requests_mock):
     assert len(resp['Vulnerabilities'][0]['Cvss']) == 1
     assert len(resp['ReferenceUrls']) >= 1
 
-def test_extra_cve_info_invalid_cve(requests_mock):
+def test_extra_cve_info_invalid_cve():
     cve_id = 'CVE-BLA-BLA'
-    url = "https://access.redhat.com/labs/securitydataapi/cve/{}".format(cve_id)
-    requests_mock.get(url, text={})
     resp = extra_cve_info(cve_id)
 
     assert resp == {}
