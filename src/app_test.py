@@ -8,6 +8,7 @@ from app import securityhub
 import json
 import pytest
 import app
+import requests
 
 @pytest.fixture
 def securityhub_stub():
