@@ -142,7 +142,7 @@ def create_finding(payload):
       "statusCode": resp['ResponseMetadata']['HTTPStatusCode']
     }
   else:
-    logger.info("Failed to import finding", extra=findings[0])
+    logger.info("Failed to import finding", extra=resp['FailedFindings'])
     metrics.add_metric(name="create_failure",
                        unit=MetricUnit.Count,
                        value=resp['FailedCount']
