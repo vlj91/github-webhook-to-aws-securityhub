@@ -9,13 +9,13 @@ import json
 import os
 import requests
 
-app = ApiGatewayResolver(proxy_type=ProxyEventType.APIGatewayProxyEventV2)
-logger = Logger(service="github-webhook")
-metrics = Metrics(service="github-webhook", namespace="service")
-securityhub = boto3.client('securityhub')
 
 aws_account_id = os.environ.get('AWS_ACCOUNT_ID', '123456789')
 aws_region = os.environ.get('AWS_REGION', 'ap-southeast-2')
+app = ApiGatewayResolver(proxy_type=ProxyEventType.APIGatewayProxyEventV2)
+logger = Logger(service="github-webhook")
+metrics = Metrics(service="github-webhook", namespace="service")
+securityhub = boto3.client('securityhub', region_name=aws_region)
 
 # Return the severity level using the payloads from GitHub and RedHat
 def get_severity(level):
