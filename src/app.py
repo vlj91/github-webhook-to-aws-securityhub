@@ -37,7 +37,7 @@ def cve_info(payload):
   if resp.ok:
     body = resp.json()
 
-    i = {
+    return {
       'Title': body['bugzilla']['description'],
       'Description': body['details'][0],
       'Vulnerabilities': [{
@@ -49,8 +49,6 @@ def cve_info(payload):
         'ReferenceUrls': [body['bugzilla']['url']]
       }]
     }
-
-    return i
   else:
     return {}
 
