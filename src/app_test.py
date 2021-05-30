@@ -289,7 +289,6 @@ def test_extra_cve_info_valid_cve():
 
     assert len(resp['Vulnerabilities']) == 1
     assert len(resp['Vulnerabilities'][0]['Cvss']) == 1
-    assert len(resp['ReferenceUrls']) >= 1
 
 def test_extra_cve_info_invalid_cve():
     cve_id = 'CVE-BLA-BLA'
