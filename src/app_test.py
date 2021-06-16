@@ -283,3 +283,15 @@ def test_get_severity_valid_payloads():
   assert app.get_severity('High') == 'HIGH'
   assert app.get_severity('Critical') == 'CRITICAL'
 
+def test_extra_cve_info_valid_cve():
+    cve_id = 'CVE-2019-8331'
+    resp = app.extra_cve_info(cve_id)
+
+    assert len(resp['Vulnerabilities']) == 1
+    assert len(resp['Vulnerabilities'][0]['Cvss']) == 1
+
+def test_extra_cve_info_invalid_cve():
+    cve_id = 'CVE-BLA-BLA'
+    resp = app.extra_cve_info(cve_id)
+
+    assert resp == {}
