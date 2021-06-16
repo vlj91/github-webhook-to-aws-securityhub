@@ -289,9 +289,3 @@ def test_extra_cve_info_valid_cve():
 
     assert len(resp['Vulnerabilities']) == 1
     assert len(resp['Vulnerabilities'][0]['Cvss']) == 1
-
-def test_extra_cve_info_invalid_cve():
-    cve_id = 'CVE-BLA-BLA'
-    resp = app.extra_cve_info(cve_id)
-
-    assert resp == {}
